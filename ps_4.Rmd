@@ -14,7 +14,9 @@ library(tidyverse)
 library(janitor)
 library(lubridate)
 
+# reads in the csv data file and assigns it to variable data
 data <- read_csv(file = "ps_4_elections-poll-nc09-3.csv",
+  # this code is sourced from lecture on 02-21-19
   col_types = cols(
     .default = col_character(),
     turnout_scale = col_double(),
@@ -24,6 +26,7 @@ data <- read_csv(file = "ps_4_elections-poll-nc09-3.csv",
     final_weight = col_double(),
     timestamp = col_datetime(format = ""))) %>%
     clean_names() %>%
+    # we filter out any values with NA and values that are refused
     filter(!is.na(response), 
          !is.na(race_eth), 
          !is.na(final_weight), 
@@ -32,6 +35,7 @@ data <- read_csv(file = "ps_4_elections-poll-nc09-3.csv",
 
 ## Question 1
 ```{r}
+# counts the number of democratic responses
 madlib_1 <- data %>% 
   filter(response == "Dem") %>%
   count()
@@ -39,16 +43,20 @@ madlib_1 <- data %>%
 There were `r madlib_1` respondents who supported the Democratic candidate.
 
 ```{r}
+# groups the democratic and republic responses in a new dataframe, then counts then
 madlib_2_dataframe <- data %>%
   filter(response %in% c("Rep", "Und")) %>%
   group_by(response) %>%
   count()
 
+# this references the first and second values from the newly created dataframe, 
+# then subtracts the values
 madlib_2 <- madlib_2_dataframe$n[1] - madlib_2_dataframe$n[2]
 ```
 There were `r madlib_2` more respondents who favored the Republican candidate than who were Undecided.
 
 ```{r}
+# filters for the different values within the gender variables 
 madlib_3 <- data %>%
   select(gender, gender_combined) %>%
   filter(gender != gender_combined) %>%
@@ -57,6 +65,8 @@ madlib_3 <- data %>%
 There are two gender variables (gender and gender_combined). There are `r madlib_3` individuals for whom these variables have different values.
 
 ```{r}
+# filters for respondents who listed white in race_eth, but not white 
+# in file_race_black
 madlib_4 <- data %>%
   filter(race_eth == "White") %>%
   filter(file_race_black != "White") %>%
@@ -65,18 +75,21 @@ madlib_4 <- data %>%
 There are `r madlib_4` respondents listed as “White” under race_eth who are not listed as “White” under file_race_black.
 
 ```{r}
+# creates new dataset called rep_time that selects the first response from the republicans
 rep_time <- data %>%
   filter(response == "Rep") %>%
   arrange(timestamp) %>%
   slice(1) %>%
   select(timestamp)
 
+# creates new dataset called dem_time that selects the first response from the democrats
 dem_time <- data %>%
   filter(response == "Dem") %>%
   arrange(timestamp) %>%
   slice(1) %>%
   select(timestamp)
 
+# lubridate subtracts these values and rounds it down
 madlib_5 <- round(as.numeric(rep_time - dem_time))
 ```
 The first response of Rep came `r madlib_5` minutes (rounded to the nearest minute) before the first response of Dem.
@@ -86,18 +99,23 @@ The first response of Rep came `r madlib_5` minutes (rounded to the nearest minu
 # You need results="asis" anytime you want to use gt to create a chart.
 table <- data %>% 
   select(response, race_eth, final_weight) %>% 
+  # this positions the ethnicities in the proper order
   mutate(race_eth = fct_relevel(race_eth, c("White", "Black", "Hispanic", "Asian", "Other"))) %>%
   group_by(race_eth, response) %>%
-  summarize(total = sum(final_weight)) %>%   
+  summarize(total = sum(final_weight)) %>%  
+  # we filter out the race/ethnicities where there are no values
   filter(race_eth != "[DO NOT READ] Don't know/Refused") %>% 
+  # by setting fill to 0, we are able to access the dataset values within the Asian responses
   spread(key =  response, value = total, fill = 0) %>% 
   ungroup() %>%
+  # we aggregate all the responses into a variable called new
   mutate(all = Dem + Rep + Und + `3`) %>% 
   mutate(Dem = Dem / all) %>% 
   mutate(Rep = Rep / all) %>% 
   mutate(Und = Und / all) %>% 
   select(-`3`, -all)
   
+# we create the table using the gt library here
 gt(table) %>% 
   tab_header(title = "Vote Spread by Ethnicity") %>% 
   cols_label(
@@ -106,14 +124,13 @@ gt(table) %>%
     Rep = "REP.",
     Und = "UND."
   ) %>%
+  # here we create the percentages for the different party groups and removing decimals
   fmt_percent(columns = vars(Dem, Rep, Und), decimals = 0) %>% 
-  # This little pipe is that incantation to take this pretty table, turn it
-  # into html, and send it to the md file we are creating. Future versions of
-  # gt will probably have a better way of doing this. Indeed, does anyone know
-  # of one?
+  # we set any 0 values to NA
   na_if(0) %>%
+  # we set the NA values to '---' as seen in the PSET guidelines
   fmt_missing(columns = vars(Und), rows = 4, missing_text = "---") %>%
-    # A title and source label is assigned
+  # title and source label is assigned
   tab_header(title = "Polling Data from 3rd Wave for North Carolina's 9th Congressional District") %>% 
   tab_source_note(source_note = "Source: New York Times Upshot/Siena College 2018 live polls") %>% 
   as_raw_html() %>% 
@@ -125,12 +142,17 @@ gt(table) %>%
 ```{r, echo=FALSE}
 data %>%
   select(educ, final_weight) %>%
+  # this positions the education levels in the proper positioning
   mutate(educ = fct_relevel(educ, c("Grade school", "High school", "Some college or trade school", 
                                     "Bachelors' degree", "Graduate or Professional Degree"))) %>%
   ggplot(aes(x = educ, y = final_weight)) +
+  # flip the coordinates to match the graph in the PSET guidelines
   coord_flip() +
+  # geom violion gives us the graph shape we are seeking
   geom_violin() +
+  # alpha, width, and size are references to make the data more clearer/easier to visualize
   geom_jitter(alpha = 0.4, width = 0.2, size = 1) +
+  # labels are assigned here
   labs(title = "More Educated Matter Less in North Carolina 9th",
        subtitle = "Poll gives more weight to people who are less likely to participate in polls",
        caption = "New York Times Upshot/Siena College 2018 live polls") +
@@ -140,17 +162,25 @@ data %>%
 
 ## Question 4
 ```{r echo=FALSE}
+# this graph depicts the varying votes for dems, reps, and inds depending on age group by grouping these
+# variables, summarizing them, and then plotting them using geom columns
 data %>%
+  # we group by ager and response to isolate these two variables
   group_by(ager, response) %>%
+  # clean the data by getting rid of DO NOT READ values
   filter(ager != "[DO NOT READ] Refused", response != "3") %>%
+  # summarize function counts the number of votes for the political parties for each age group
   summarize(N = n()) %>%
+  # creates the ggplot and fills the column colors by response to visualize the data in an easier manner 
   ggplot(aes(x = ager, y = N, fill = response)) +
   geom_col(position = "dodge2") +
+  # labels are created for the graph
   labs(title = "Political Votes Based on Age", subtitle = "Graph shows voting patterns among age groups",
        caption = "New York Times Upshot/Siena College 2018 live polls") +
   xlab(NULL) + 
   ylab("Percentage of Votes") +
   guides(fill = guide_legend(title = "Response")) +
+  # flips the coordinates to visualize the data in an easier manner
   coord_flip()
 ```
 

@@ -1,0 +1,96 @@
+---
+title: "Pset 4"
+author: "Igor Morzan"
+date: "2/27/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+# these are the necessary libraries with their functions for this PSET
+
+library(gt)
+library(tidyverse)
+
+# I like to do the maindownload, if any, in the first code chunk. Then, I don't
+# need to re-run this code every time I fix something. We discussed col_types()
+# in class. Again, without this, the code still runs, but would produce an
+# annoying message. That message won't get outputted here because include=FALSE
+# prevents it.
+
+orig <- read_csv(
+  file = "https://raw.githubusercontent.com/TheUpshot/2018-live-poll-results/master/data/elections-poll-az06-3.csv",
+                 col_types = cols(
+                   .default = col_character(),
+                   turnout_scale = col_double(),
+                   turnout_score = col_double(),
+                   w_LV = col_double(),
+                   w_RV = col_double(),
+                   final_weight = col_double(),
+                   timestamp = col_datetime(format = "")))
+
+```
+
+```{r make_chart, echo=FALSE, results="asis"}
+# Note that I typically set knitr::opts_chunk$set(echo = FALSE) in the first
+# code chunk. This makes echo=FALSE the default, meaning that I would not need
+# to set it here.
+
+# You need results="asis" anytime you want to use gt to create a chart.
+
+orig %>% 
+  select(response, educ4, final_weight) %>% 
+  group_by(educ4, response) %>% 
+  
+  # Again, this is not a course in survey weighting. There is an argument that I
+  # should just ignore the topic altogether. But, I really like to replicate
+  # published results, and that always requires weights. Hence today's
+  # monologue. But only two people fell asleep during it --- not kidding! --- so
+  # I count that as a victory.
+  
+  # All you need to know for this class is: Use sum(weight_var) in place of n().
+  
+  summarize(total = sum(final_weight)) %>%   
+  filter(educ4 != "[DO NOT READ] Don't know/Refused") %>% 
+  spread(key =  response, value = total) %>% 
+  mutate(all = Dem + Rep + Und) %>% 
+  mutate(Dem = Dem / all) %>% 
+  mutate(Rep = Rep / all) %>% 
+  mutate(Und = Und / all) %>% 
+  select(-all) %>% 
+  
+  # One of the biggest pieces of black magic incantation in R is ungroup(). (I
+  # did not mention this in class.) Summary: Whenever you group a tibble (as we
+  # do above) the grouping stays with an resulting object, until you explicitly
+  # ungroup() it. That can't ever hurt things (right? TFs?) and it often helps,
+  # as in this case.
+  
+  ungroup() %>% 
+  
+  # You will have a chance to explore many other gt commands in problem set #4.
+  # I added two extras that we did not get to in class.
+  
+  gt() %>% 
+    tab_header(
+      title = "Polling Results in Arizon 6th Congressional District") %>% 
+    
+    cols_label(
+      educ4 = "Education",
+      Dem = "DEM.",
+      Rep = "REP.",
+      Und = "UND."
+      ) %>%
+  
+    fmt_percent(columns = vars(Dem, Rep, Und),
+                decimals = 0) %>% 
+  
+    # This little pipe is that incantation to take this pretty table, turn it
+    # into html, and send it to the md file we are creating. Future versions of
+    # gt will probably have a better way of doing this. Indeed, does anyone know
+    # of one?
+
+    as_raw_html() %>% as.character() %>% cat()
+  
+
+```

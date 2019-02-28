@@ -9,37 +9,72 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE)
 
 # these are the necessary libraries with their functions for this PSET
-
 library(gt)
 library(tidyverse)
+library(janitor)
+library(lubridate)
 
-# I like to do the maindownload, if any, in the first code chunk. Then, I don't
-# need to re-run this code every time I fix something. We discussed col_types()
-# in class. Again, without this, the code still runs, but would produce an
-# annoying message. That message won't get outputted here because include=FALSE
-# prevents it.
+data <- read_csv(file = "ps_4_elections-poll-nc09-3.csv",
+  col_types = cols(
+    .default = col_character(),
+    turnout_scale = col_double(),
+    turnout_score = col_double(),
+    w_LV = col_double(),
+    w_RV = col_double(),
+    final_weight = col_double(),
+    timestamp = col_datetime(format = "")))
 
-orig <- read_csv(
-  file = "https://raw.githubusercontent.com/TheUpshot/2018-live-poll-results/master/data/elections-poll-az06-3.csv",
-                 col_types = cols(
-                   .default = col_character(),
-                   turnout_scale = col_double(),
-                   turnout_score = col_double(),
-                   w_LV = col_double(),
-                   w_RV = col_double(),
-                   final_weight = col_double(),
-                   timestamp = col_datetime(format = "")))
-
+data %>%
+  clean_names() %>%
+  filter(!is.na(response), !is.na(race_eth), !is.na(final_weight), educ != "[DO NOT READ] Refused")
 ```
 
+## Question 1
+```{r}
+madlib_1 <- data %>% 
+  filter(response == "Dem") %>%
+  count()
+```
+There were `r madlib_1` respondents who supported the Democratic candidate.
+
+```{r}
+madlib_2_dataframe <- data %>%
+  filter(response %in% c("Rep", "Und")) %>%
+  group_by(response) %>%
+  count()
+
+madlib_2 <- madlib_2_dataframe$n[1] - madlib_2_dataframe$n[2]
+```
+There were `r madlib_2` more respondents who favored the Republican candidate than who were Undecided.
+
+```{r}
+madlib_3 <- data %>%
+  select(gender, gender_combined) %>%
+  filter(gender != gender_combined) %>%
+  count()
+```
+There are two gender variables (gender and gender_combined). There are `r madlib_3` individuals for whom these variables have different values.
+
+```{r}
+madlib_4 <- data %>%
+  filter(race_eth == "White") %>%
+  filter(file_race_black != "White") %>%
+  count()
+```
+There are `r madlib_4` respondents listed as “White” under race_eth who are not listed as “White” under file_race_black.
+
+```{r}
+madlib_5 <- data %>%
+  filter()
+```
+The first response of Rep came X minutes (rounded to the nearest minute) before the first response of Dem.
+
+## Question 2
 ```{r make_chart, echo=FALSE, results="asis"}
-# Note that I typically set knitr::opts_chunk$set(echo = FALSE) in the first
-# code chunk. This makes echo=FALSE the default, meaning that I would not need
-# to set it here.
 
 # You need results="asis" anytime you want to use gt to create a chart.
 
-orig %>% 
+data %>% 
   select(response, educ4, final_weight) %>% 
   group_by(educ4, response) %>% 
   
@@ -91,6 +126,5 @@ orig %>%
     # of one?
 
     as_raw_html() %>% as.character() %>% cat()
-  
 
 ```

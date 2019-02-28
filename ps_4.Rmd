@@ -116,8 +116,28 @@ gt(table) %>%
   fmt_missing(columns = vars(Und), rows = 4, missing_text = "---") %>%
     # A title and source label is assigned
   tab_header(title = "Polling Data from 3rd Wave for North Carolina's 9th Congressional District") %>% 
-  tab_source_note(source_note = "Source: New York Times Upshot") %>% 
+  tab_source_note(source_note = "Source: New York Times Upshot/Siena College 2018 live polls") %>% 
   as_raw_html() %>% 
   as.character() %>% 
   cat()
 ```
+
+## Question 3
+```{r, echo=FALSE}
+data %>%
+  select(educ, final_weight) %>%
+  filter(educ != "[DO NOT READ] Refused") %>%
+  mutate(educ = fct_relevel(educ, c("Grade school", "High school", "Some college or trade school", 
+                                    "Bachelors' degree", "Graduate or Professional Degree"))) %>%
+  ggplot(aes(x = educ, y = final_weight)) +
+  coord_flip() +
+  geom_violin() +
+  geom_jitter(alpha = 0.3, width = 0.1) +
+  labs(title = "More Educated Matter Less in North Carolina 9th",
+       subtitle = "Poll gives more weight to people who are less likely to participate in polls",
+       caption = "New York Times Upshot/Siena College 2018 live polls") +
+  xlab(NULL) +
+  ylab("Weight Given to Respondent in Calculating Poll Results")
+```
+
+## Question 4

@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = FALSE)
 library(gt)
 library(tidyverse)
 library(janitor)
-library(readxl)
 library(lubridate)
 
 data <- read_csv(file = "ps_4_elections-poll-nc09-3.csv",
@@ -126,13 +125,12 @@ gt(table) %>%
 ```{r, echo=FALSE}
 data %>%
   select(educ, final_weight) %>%
-  filter(educ != "[DO NOT READ] Refused") %>%
   mutate(educ = fct_relevel(educ, c("Grade school", "High school", "Some college or trade school", 
                                     "Bachelors' degree", "Graduate or Professional Degree"))) %>%
   ggplot(aes(x = educ, y = final_weight)) +
   coord_flip() +
   geom_violin() +
-  geom_jitter(alpha = 0.3, width = 0.1) +
+  geom_jitter(alpha = 0.4, width = 0.2, size = 1) +
   labs(title = "More Educated Matter Less in North Carolina 9th",
        subtitle = "Poll gives more weight to people who are less likely to participate in polls",
        caption = "New York Times Upshot/Siena College 2018 live polls") +
@@ -141,3 +139,20 @@ data %>%
 ```
 
 ## Question 4
+```{r echo=FALSE}
+data %>%
+  group_by(ager, response) %>%
+  filter(ager != "[DO NOT READ] Refused", response != "3") %>%
+  summarize(N = n()) %>%
+  ggplot(aes(x = ager, y = N, fill = response)) +
+  geom_col(position = "dodge2") +
+  labs(title = "Political Votes Based on Age", subtitle = "Graph shows voting patterns among age groups",
+       caption = "New York Times Upshot/Siena College 2018 live polls") +
+  xlab(NULL) + 
+  ylab("Percentage of Votes") +
+  guides(fill = guide_legend(title = "Response")) +
+  coord_flip()
+```
+
+## Colleagues
+Simone Chu & Margaret Sun
